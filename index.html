@@ -182,8 +182,11 @@
     color:#17171f;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;cursor:pointer}
   .sk{height:12px;border-radius:5px;background:var(--fill-2);margin:11px 0;animation:sh 1.5s ease-in-out infinite}
   @keyframes sh{0%,100%{opacity:.4}50%{opacity:.85}}
-  footer{margin-top:30px;padding-top:15px;border-top:1px solid var(--hair);
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--hair);
     font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--label-3);line-height:1.9;text-align:center}
+  footer p{margin:0}
+  footer .credit{color:var(--label-2);margin-bottom:8px}
+  footer .credit b{color:var(--label);font-weight:600;letter-spacing:.02em}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -216,7 +219,11 @@
   <div class="lhd"><span id="lhL">Builds</span><span id="lhR"></span></div>
   <div id="results"><div class="note"><div class="sk" style="width:66%"></div><div class="sk" style="width:44%"></div><div class="sk" style="width:57%"></div></div></div>
 
-  <footer>Live from AppleDB · littlebyteorg/appledb<br>Built for the AppleTalk thread</footer>
+  <footer>
+    <p class="credit">Medallion after the AppleTalk mark by <b>Lee Pears</b></p>
+    <p>Release data live from AppleDB · littlebyteorg/appledb</p>
+    <p>Built for the AppleTalk thread</p>
+  </footer>
 </div>
 
 <script>
