@@ -2,6 +2,26 @@
 
 All notable changes to the Release Ledger are documented here. Dates are UTC.
 
+## 2026-08-07 — macOS support, OS toggle, contrast fix
+
+### Added
+- **macOS build data.** A second AppleDB feed (`ios/macOS/main.ics`, with the same mirror fallback chain as the iOS feed) is now fetched in parallel alongside the existing iOS/iPadOS feed. The two feeds fail independently — if one is unreachable, the other still loads and the status line says which source is missing rather than showing nothing.
+- **OS toggle.** A new segmented row (iOS / iPadOS / macOS) sits above the existing Public/Beta/RC/SDK row, each pill tinted with its own accent color. Toggling an OS off filters it out of the results list and the version rail's counts, mirroring how the release-type toggles already worked.
+- 2,696 macOS builds spanning Mac OS X 10.0 (2000) through the current macOS release, parsed by the existing ICS parser with three additional recognized OS-name prefixes (`Mac OS X`, `OS X`, `macOS`).
+
+### Fixed
+- **Grey text contrast.** `--label-2` and `--label-3` (the site's secondary/tertiary text colors) failed WCAG AA contrast against the page's background gradient — `--label-3` measured as low as 2.76:1 in spots. Both are now ≥4.5:1 against all three gradient stops while keeping the existing visual hierarchy between them.
+
+### Changed
+- **Gap/cadence tracking now buckets by product, not by era-specific branding.** macOS's three historical names (`Mac OS X`, `OS X`, `macOS`) are treated as one continuous line for "days since the last build" math, so a macOS 10.x build doesn't get treated as a "first build" just because it fell on the other side of a rebrand from the previous one.
+- Subtitle updated to mention macOS and the earlier 2000 start date.
+
+### Known limitations
+- **The medallion's rings are version-number-agnostic across OSes** (a pre-existing property of the visualization, now inherited by macOS): macOS's major "10" spans 2001–2019, so it shares a ring with iOS's much shorter-lived major "10" (2016–2017). Toggling an OS off does not currently thin out the medallion itself, only the rail/list below it — same behavior the release-type toggles have always had.
+
+### Testing
+- Extended the jsdom harness with 35 assertions covering: mixed-feed parsing (iOS/iPadOS/macOS all present), correct OS bucketing for all three macOS-era name prefixes, unified (non-fragmented) cadence tracks across macOS rebrands, OS-toggle click wiring and its interaction with the existing type-toggle wiring, combined-filter correctness, rail-count filtering, medal render stability, and graceful degradation for both a single-feed outage and a total outage. All 35 passing.
+
 ## 2026-08-07 — Public beta backfill
 
 ### Added
