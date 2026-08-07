@@ -221,8 +221,9 @@
 
   <footer>
     <p class="credit">Medallion after the AppleTalk mark by <b>Lee Pears</b></p>
-    <p>Release data live from AppleDB · littlebyteorg/appledb</p>
-    <p>Built for the AppleTalk thread</p>
+    <p>Release data live from AppleDB · littlebyteorg/appledb, © 2022 emiyl, MIT licensed</p>
+    <p>Public beta dates sourced from MacRumors reporting and forum records</p>
+    <p>Built for the AppleTalk thread · not affiliated with Apple Inc.</p>
   </footer>
 </div>
 
@@ -235,6 +236,157 @@ const SOURCES = [
   "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/iOS/main.ics"
 ];
 const KIND_COLOR = { public:"#3ac8e8", beta:"#ff8a3d", rc:"#c061ff", tool:"#8a8a95" };
+
+// Public beta seeding dates, sourced from MacRumors coverage (article dates and/or
+// Banglazed's MacRumors-forum beta threads) and cross-checked against a real AppleDB
+// build for every entry — see README/commit notes for method. Absence of an entry
+// means "not yet researched," never "no public beta existed." Backfilled newest-first
+// down to iOS 9 (Apple's first public-beta cycle); nothing earlier is covered.
+//
+// Keys are "version|date" where date is the AppleDB row's own release date. A plain
+// "version|date" key applies to both iOS and iPadOS on that date. When the two OSes
+// genuinely diverged for the same round, the key is OS-prefixed ("iPadOS|version|date")
+// and takes priority over any plain key for that OS/date — see publicBetaFor().
+//
+// Shape 1 (same:true) — Apple re-seeded the identical developer build to public
+// testers days later; AppleDB has one row (dated here) and "date" is the later
+// public-seed date pulled from MacRumors.
+// Shape 2 (own:true) — Apple cut a build specifically for the public beta; AppleDB
+// already carries it as its own row, dated on the day it went out, which is the date
+// used in the key — no separate "date" field needed.
+const PUBLIC_BETA = {
+  "27.0|2026-07-20":{n:2,date:"2026-07-22",same:true},
+  "iPadOS|27.0|2026-07-13":{n:1,own:true},
+  "26.6|2026-07-06":{n:4,date:"2026-07-07",same:true},
+  "iOS|27.0|2026-07-06":{n:1,date:"2026-07-13",same:true},
+  "26.6|2026-06-29":{n:3,date:"2026-06-30",same:true},
+  "26.6|2026-06-15":{n:2,date:"2026-06-16",same:true},
+  "26.6|2026-05-26":{n:1,date:"2026-05-28",same:true},
+  "26.5|2026-04-03":{n:1,date:"2026-04-03",same:true},
+  "26.4|2026-02-16":{n:1,date:"2026-02-17",same:true},
+  "26.3|2026-01-26":{n:3,date:"2026-01-27",same:true},
+  "26.3|2025-12-15":{n:1,date:"2025-12-17",same:true},
+  "26.2|2025-11-17":{n:2,date:"2025-11-18",same:true},
+  "26.2|2025-11-04":{n:1,date:"2025-11-06",same:true},
+  "26.1|2025-10-20":{n:4,date:"2025-10-20",same:true},
+  "26.1|2025-10-13":{n:3,date:"2025-10-14",same:true},
+  "26.1|2025-10-06":{n:2,date:"2025-10-07",same:true},
+  "26.1|2025-09-22":{n:1,date:"2025-09-24",same:true},
+  "iOS|26.0|2025-07-25":{n:1,own:true,note:"iPhone 11 variant"},
+  "iOS|26.0|2025-07-24":{n:1,own:true},
+  "iPadOS|26.0|2025-07-22":{n:1,date:"2025-07-24",same:true},
+  "18.6|2025-07-14":{n:3,date:"2025-07-15",same:true},
+  "18.6|2025-06-30":{n:2,date:"2025-07-01",same:true},
+  "18.6|2025-06-16":{n:1,date:"2025-06-18",same:true},
+  "18.5|2025-04-21":{n:2,date:"2025-04-22",same:true},
+  "18.4|2025-03-10":{n:3,date:"2025-03-11",same:true},
+  "18.4|2025-03-03":{n:2,date:"2025-03-04",same:true},
+  "18.4|2025-02-21":{n:1,date:"2025-02-24",same:true},
+  "18.2|2024-11-11":{n:2,date:"2024-11-12",same:true},
+  "18.2|2024-11-04":{n:1,date:"2024-11-06",same:true},
+  "18.1|2024-09-23":{n:2,date:"2024-09-24",same:true},
+  "18.1|2024-09-17":{n:1,date:"2024-09-19",same:true},
+  "18.0|2024-08-05":{n:3,date:"2024-08-06",same:true},
+  "18.0|2024-07-26":{n:2,date:"2024-07-29",same:true},
+  "18.0|2024-07-15":{n:1,date:"2024-07-15",same:true},
+  "17.6|2024-07-09":{n:3,date:"2024-07-10",same:true},
+  "17.6|2024-07-01":{n:2,date:"2024-07-02",same:true},
+  "17.5|2024-04-23":{n:3,date:"2024-04-24",same:true},
+  "17.4|2024-02-13":{n:3,date:"2024-02-14",same:true},
+  "17.4|2024-02-06":{n:2,date:"2024-02-07",same:true},
+  "iOS|17.4|2024-01-30":{n:1,date:"2024-01-30",same:true,note:"iPadOS's public beta 1 build for this round is unresolved"},
+  "17.3|2024-01-09":{n:3,date:"2024-01-10",same:true},
+  "17.2|2023-11-14":{n:3,date:"2023-11-15",same:true},
+  "17.1|2023-10-10":{n:3,date:"2023-10-10",same:true},
+  "17.0|2023-08-08":{n:3,date:"2023-08-09",same:true},
+  "17.0|2023-07-31":{n:2,date:"2023-07-31",same:true},
+  "17.0|2023-07-11":{n:1,date:"2023-07-12",same:true},
+  "16.6|2023-05-31":{n:2,date:"2023-06-01",same:true},
+  "16.6|2023-05-19":{n:1,date:"2023-05-22",same:true},
+  "16.5|2023-04-25":{n:3,date:"2023-04-26",same:true},
+  "16.5|2023-04-11":{n:2,date:"2023-04-12",same:true},
+  "16.5|2023-03-28":{n:1,date:"2023-03-30",same:true},
+  "16.4|2023-02-16":{n:1,date:"2023-02-17",same:true},
+  "16.3|2022-12-14":{n:1,date:"2022-12-15",same:true},
+  "16.2|2022-11-15":{n:3,date:"2022-11-16",same:true},
+  "16.2|2022-11-08":{n:2,date:"2022-11-09",same:true},
+  "16.2|2022-10-25":{n:1,date:"2022-10-27",same:true},
+  "16.1|2022-09-27":{n:3,date:"2022-09-28",same:true},
+  "16.1|2022-09-20":{n:2,date:"2022-09-21",same:true},
+  "16.1|2022-09-14":{n:1,date:"2022-09-15",same:true},
+  "iOS|16.0|2022-08-29":{n:6,date:"2022-08-30",same:true},
+  "iOS|16.0|2022-08-23":{n:5,date:"2022-08-24",same:true},
+  "iPadOS|16.1|2022-08-23":{n:5,date:"2022-08-24",same:true,note:"labeled 16.1 beta 1 — iPadOS's public track briefly jumped ahead of iOS's"},
+  "16.0|2022-08-15":{n:4,date:"2022-08-15",same:true},
+  "16.0|2022-08-08":{n:3,date:"2022-08-09",same:true},
+  "16.0|2022-07-27":{n:2,date:"2022-07-28",same:true},
+  "16.0|2022-07-11":{n:1,date:"2022-07-11",same:true},
+  "15.6|2022-05-18":{n:1,date:"2022-05-19",same:true},
+  "15.5|2022-04-19":{n:2,date:"2022-04-20",same:true},
+  "15.5|2022-04-05":{n:1,date:"2022-04-06",same:true},
+  "15.4|2022-02-15":{n:3,date:"2022-02-16",same:true},
+  "15.4|2022-02-08":{n:2,date:"2022-02-09",same:true},
+  "15.4|2022-01-27":{n:1,date:"2022-01-28",same:true},
+  "15.3|2022-01-12":{n:2,date:"2022-01-13",same:true},
+  "15.3|2021-12-17":{n:1,date:"2021-12-20",same:true},
+  "15.2|2021-11-09":{n:2,date:"2021-11-10",same:true},
+  "15.2|2021-10-27":{n:1,date:"2021-10-28",same:true},
+  "15.1|2021-09-28":{n:2,date:"2021-09-29",same:true},
+  "15.1|2021-09-21":{n:1,date:"2021-09-22",same:true},
+  "15.0|2021-06-30":{n:1,date:"2021-06-30",same:true},
+  "14.2|2020-10-20":{n:4,date:"2020-10-21",same:true},
+  "14.2|2020-10-13":{n:3,date:"2020-10-14",same:true},
+  "14.2|2020-09-29":{n:2,date:"2020-09-30",same:true},
+  "14.2|2020-09-17":{n:1,date:"2020-09-21",same:true},
+  "14.0|2020-08-18":{n:5,date:"2020-08-19",same:true},
+  "14.0|2020-07-22":{n:2,date:"2020-07-23",same:true},
+  "14.0|2020-07-07":{n:1,date:"2020-07-09",same:true},
+  "13.3|2019-11-05":{n:1,date:"2019-11-06",same:true},
+  "13.1|2019-09-10":{n:3,date:"2019-09-11",same:true},
+  "13.1|2019-09-04":{n:2,date:"2019-09-04",same:true},
+  "13.1|2019-08-27":{n:1,date:"2019-08-28",same:true},
+  "13.0|2019-08-15":{n:6,date:"2019-08-15",same:true},
+  "13.0|2019-08-07":{n:5,date:"2019-08-08",same:true},
+  "13.0|2019-07-29":{n:4,date:"2019-07-30",same:true},
+  "13.0|2019-07-17":{n:3,date:"2019-07-18",same:true},
+  "13.0|2019-07-08":{n:2,date:"2019-07-08",same:true},
+  "13.0|2019-06-17":{n:1,date:"2019-06-24",same:true},
+  "12.4|2019-05-20":{n:1,date:"2019-05-20",same:true},
+  "12.3|2019-04-29":{n:4,date:"2019-04-29",same:true},
+  "12.3|2019-04-22":{n:3,date:"2019-04-23",same:true},
+  "12.2|2019-01-24":{n:1,date:"2019-01-28",same:true},
+  "12.1.3|2018-12-19":{n:1,date:"2018-12-19",same:true},
+  "12.1.2|2018-12-10":{n:1,date:"2018-12-11",same:true},
+  "12.1.1|2018-10-31":{n:1,date:"2018-11-01",same:true},
+  "12.1|2018-09-18":{n:1,date:"2018-09-20",same:true},
+  "12.0|2018-06-19":{n:1,date:"2018-06-25",same:true},
+  "11.4.1|2018-05-30":{n:1,date:"2018-05-31",same:true},
+  "11.4|2018-04-02":{n:1,date:"2018-04-03",same:true},
+  "11.3|2018-01-24":{n:1,date:"2018-01-25",same:true},
+  "11.2.5|2018-01-09":{n:1,date:"2018-01-10",same:true},
+  "11.2|2017-10-30":{n:1,date:"2017-11-01",same:true},
+  "11.1|2017-10-09":{n:2,date:"2017-10-09",same:true},
+  "11.1|2017-09-27":{n:1,date:"2017-09-28",same:true},
+  "11.0|2017-07-10":{n:2,date:"2017-07-12",same:true},
+  "11.0|2017-06-26":{n:1,date:"2017-06-26",same:true},
+  "10.3|2017-02-20":{n:3,date:"2017-02-21",same:true},
+  "10.2|2016-11-07":{n:2,date:"2016-11-08",same:true},
+  "10.2|2016-10-31":{n:1,date:"2016-11-01",same:true},
+  "10.1|2016-10-04":{n:2,date:"2016-10-05",same:true},
+  "10.1|2016-09-21":{n:1,date:"2016-09-22",same:true},
+  "10.0|2016-08-19":{n:6,date:"2016-08-19",same:true},
+  "10.0|2016-08-15":{n:5,date:"2016-08-15",same:true},
+  "10.0|2016-08-09":{n:4,date:"2016-08-10",same:true},
+  "10.0|2016-08-01":{n:3,date:"2016-08-02",same:true},
+  "10.0|2016-07-18":{n:2,date:"2016-07-20",same:true},
+  "10.0|2016-07-05":{n:1,date:"2016-07-07",same:true},
+  "9.0|2015-08-06":{n:3,date:"2015-08-06",same:true},
+  "9.0|2015-07-21":{n:2,date:"2015-07-22",same:true},
+  "9.0|2015-07-08":{n:1,date:"2015-07-09",same:true},
+  // KNOWN PENDING: iOS/iPadOS 26.6 public beta 5 — MacRumors' 2026-07-13 article title
+  // carries an "[Update: Public Beta Available]" suffix, meaning the public seed could
+  // be that same day or the next. Deliberately omitted rather than guessed.
+};
 
 let ALL = [], TRACKS = new Map(), MAJORS = [], selected = null, shown = 200;
 const state = { q:"", types:{public:true,beta:true,rc:true,tool:false}, major:null };
@@ -314,10 +466,26 @@ function ago(d){
   const y = Math.floor(days/365.25), rm = Math.round((days%365.25)/30.44);
   return y+(y===1?" year":" years")+(rm?`, ${rm} mo`:"")+" ago";
 }
+/* ── public beta lookup ───────────────────────
+   PUBLIC_BETA is keyed "version|date" (applies to both OSes) or, when iOS and
+   iPadOS genuinely diverged for the same round, "os|version|date" — the
+   OS-specific key wins when both could match. */
+const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parseISO = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+function publicBetaFor(r){
+  if (r.kind !== "beta") return null;
+  const dk = isoDate(r.date);
+  return PUBLIC_BETA[r.os+"|"+r.version+"|"+dk] || PUBLIC_BETA[r.version+"|"+dk] || null;
+}
+
 function pillOf(r){
   if (r.kind==="tool") return ["tool", /simulator/i.test(r.qualifier)?"Simulator":"SDK"];
   if (r.kind==="rc")   return ["rc","Release candidate"];
-  if (r.kind==="beta") return ["beta", r.internal?"Internal beta":"Beta"];
+  if (r.kind==="beta"){
+    const pb = publicBetaFor(r);
+    if (pb && pb.own) return ["public", `Public beta ${pb.n}`];
+    return ["beta", r.internal?"Internal beta":"Beta"];
+  }
   if (r.rsr) return ["public","Rapid Security Response"];
   if (r.bsi) return ["public","Background security"];
   return ["public","Public release"];
@@ -432,6 +600,13 @@ function renderDetail(){
     ? `<details class="dv"><summary>${r.devices.length} supported device${r.devices.length===1?"":"s"}</summary><p>${r.devices.join(" · ")}</p></details>`
     : `<span class="s">Not recorded</span>`;
 
+  const pb = publicBetaFor(r);
+  const pbRow = !pb ? "" : `<div class="rw"><dt>Public beta</dt><dd>${
+      pb.own
+        ? `This build <em style="font-style:normal;color:var(--public)">is</em> public beta ${pb.n}${pb.note?`<span class="s">${pb.note}</span>`:""}`
+        : `Public beta ${pb.n} — this build was reseeded to public testers on ${longDate(parseISO(pb.date))}<span class="s">${ago(parseISO(pb.date))}${pb.note?" · "+pb.note:""}</span>`
+    }</dd></div>`;
+
   el.innerHTML = `<div class="card">
     <div class="card-hd">
       <h2 class="vtitle">${r.os} ${r.version}${r.qualifier?` <em style="color:${KIND_COLOR[r.kind]}">${r.qualifier}</em>`:""}</h2>
@@ -442,6 +617,7 @@ function renderDetail(){
       <div class="rw"><dt>Released</dt><dd>${longDate(r.date)}<span class="s">${ago(r.date)}</span></dd></div>
       <div class="rw"><dt>Gap</dt>${gap}</div>
       <div class="rw"><dt>Runs on</dt><dd>${dv}</dd></div>
+      ${pbRow}
     </dl>
     <div class="cad" id="cad"></div>
     ${r.url?`<a class="adb" href="${r.url}" target="_blank" rel="noopener">Full record on AppleDB ↗</a>`:""}
