@@ -13,14 +13,18 @@
     --fill-2:rgba(255,255,255,.085);
     --hair:rgba(255,255,255,.10);
     --label:#f2f2f7;
-    --label-2:#9e9eab;
-    --label-3:#70707d;
+    --label-2:#adadbb;
+    --label-3:#97979f;
     /* the icon's conic spectrum, assigned meaning */
     --public:#3ac8e8;
     --beta:#ff8a3d;
     --rc:#c061ff;
     --tool:#8a8a95;
     --core:#ff4fa3;      /* the magenta at the centre of the medallion */
+    /* operating system accents, kept distinct from the kind colors above */
+    --os-ios:#5ac8fa;
+    --os-ipados:#bf5af2;
+    --os-macos:#32d74b;
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -88,6 +92,8 @@
   .seg[aria-pressed="true"]{background:var(--fill-2);border-color:var(--hair);color:var(--label)}
   .seg[data-f="public"]{color:var(--public)} .seg[data-f="beta"]{color:var(--beta)}
   .seg[data-f="rc"]{color:var(--rc)}         .seg[data-f="tool"]{color:var(--tool)}
+  .seg[data-os="iOS"]{color:var(--os-ios)}   .seg[data-os="iPadOS"]{color:var(--os-ipados)}
+  .seg[data-os="macOS"]{color:var(--os-macos)}
   .seg[aria-pressed="false"]{opacity:.45}
   .seg:focus-visible{outline:2px solid var(--core);outline-offset:2px}
 
@@ -197,7 +203,7 @@
     <div class="medal" id="medal"></div>
     <div class="medal-cap" id="medalcap">Each ring is a version. Each dot sits where in the year it shipped.</div>
     <h1>AppleTalk <span>Release Ledger</span></h1>
-    <p class="sub">Every iOS and iPadOS build Apple has shipped since 2007 — public, beta, RC — and how long each one trailed the last.</p>
+    <p class="sub">Every iOS, iPadOS, and macOS build Apple has shipped since 2000 — public, beta, RC — and how long each one trailed the last.</p>
     <div class="live"><span class="dot" id="dot"></span><span id="statustext">Loading AppleDB…</span></div>
   </div>
 
@@ -206,7 +212,13 @@
     <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="26.6 · 23G71 · 17 beta 3" aria-label="Search version or build">
   </div>
 
-  <div class="segs" role="group" aria-label="Release type">
+  <div class="segs" id="ossegs" role="group" aria-label="Operating system">
+    <button class="seg" data-os="iOS"    aria-pressed="true"><i></i>iOS</button>
+    <button class="seg" data-os="iPadOS" aria-pressed="true"><i></i>iPadOS</button>
+    <button class="seg" data-os="macOS"  aria-pressed="true"><i></i>macOS</button>
+  </div>
+
+  <div class="segs" id="typesegs" role="group" aria-label="Release type">
     <button class="seg" data-f="public" aria-pressed="true"><i></i>Public</button>
     <button class="seg" data-f="beta"   aria-pressed="true"><i></i>Beta</button>
     <button class="seg" data-f="rc"     aria-pressed="true"><i></i>RC</button>
@@ -230,10 +242,19 @@
 <script>
 "use strict";
 
-const SOURCES = [
-  "https://api.appledb.dev/ios/iOS/main.ics",
-  "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/ios/iOS/main.ics",
-  "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/iOS/main.ics"
+// One feed group per AppleDB calendar; each tries its own mirror list independently
+// so a hiccup on one (e.g. macOS's) doesn't take down the other's data.
+const FEEDS = [
+  { name:"iOS", urls:[
+      "https://api.appledb.dev/ios/iOS/main.ics",
+      "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/ios/iOS/main.ics",
+      "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/iOS/main.ics"
+  ]},
+  { name:"macOS", urls:[
+      "https://api.appledb.dev/ios/macOS/main.ics",
+      "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/ios/macOS/main.ics",
+      "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/macOS/main.ics"
+  ]}
 ];
 const KIND_COLOR = { public:"#3ac8e8", beta:"#ff8a3d", rc:"#c061ff", tool:"#8a8a95" };
 
@@ -389,7 +410,11 @@ const PUBLIC_BETA = {
 };
 
 let ALL = [], TRACKS = new Map(), MAJORS = [], selected = null, shown = 200;
-const state = { q:"", types:{public:true,beta:true,rc:true,tool:false}, major:null };
+const state = { q:"", types:{public:true,beta:true,rc:true,tool:false}, os:{iOS:true,iPadOS:true,macOS:true}, major:null };
+// Mac OS X / OS X / macOS are the same product under three eras of branding —
+// bucket them together so the OS toggle and gap/cadence tracking treat them as
+// one continuous line rather than fragmenting at each rename.
+const osBucket = os => (os==="Mac OS X"||os==="OS X"||os==="macOS") ? "macOS" : os==="iPadOS" ? "iPadOS" : "iOS";
 const $ = s => document.querySelector(s);
 
 /* ── parse ─────────────────────────────────── */
@@ -407,7 +432,7 @@ function parseIcs(text){
 
     const pm = summary.match(/^(.*)\s+\(([^()]+)\)\s*$/);
     const label = pm ? pm[1] : summary, build = pm ? pm[2] : "";
-    const lm = label.match(/^(iPhone Software|iPhone OS|iPadOS|iOS|\S+)\s+(\d[\d.]*)\s*(.*)$/);
+    const lm = label.match(/^(iPhone Software|iPhone OS|iPadOS|iOS|Mac OS X|OS X|macOS|\S+)\s+(\d[\d.]*)\s*(.*)$/);
     if (!lm) continue;
     const os = lm[1], version = lm[2], qualifier = lm[3].trim();
 
@@ -424,7 +449,7 @@ function parseIcs(text){
     const doy = Math.floor((date - new Date(date.getFullYear(),0,1)) / 86400000);
 
     out.push({
-      os, version, qualifier, build, kind, devices, date, doy,
+      os, osb:osBucket(os), version, qualifier, build, kind, devices, date, doy,
       rsr:/rapid security response/i.test(desc),
       bsi:/background security improvement/i.test(desc),
       internal:/internal build/i.test(desc),
@@ -440,7 +465,7 @@ function buildTracks(list){
   TRACKS = new Map();
   for (const r of list){
     if (r.kind === "tool") continue;
-    const k = r.os + "|" + r.major;
+    const k = r.osb + "|" + r.major;
     (TRACKS.get(k) || TRACKS.set(k,[]).get(k)).push(r);
   }
   for (const arr of TRACKS.values()){
@@ -556,6 +581,7 @@ function tokenHit(t, r, hay){
 
 function matches(r){
   if (!state.types[r.kind]) return false;
+  if (!state.os[r.osb]) return false;
   if (state.q){
     const hay = (r.os+" "+r.version+" "+r.qualifier+" "+r.build).toLowerCase();
     return state.q.toLowerCase().split(/\s+/).filter(Boolean).every(t => tokenHit(t, r, hay));
@@ -565,7 +591,7 @@ function matches(r){
 
 function renderRail(){
   const counts = new Map();
-  for (const r of ALL) if (state.types[r.kind]) counts.set(r.major,(counts.get(r.major)||0)+1);
+  for (const r of ALL) if (state.types[r.kind] && state.os[r.osb]) counts.set(r.major,(counts.get(r.major)||0)+1);
   const rail = $("#rail"); rail.innerHTML = "";
   const mk = (txt,val,sub) => {
     const b = document.createElement("button");
@@ -575,7 +601,7 @@ function renderRail(){
     b.onclick = () => { state.major = state.major===val ? null : val; shown=200; render(); };
     return b;
   };
-  rail.appendChild(mk("All", null, String(ALL.filter(r=>state.types[r.kind]).length)));
+  rail.appendChild(mk("All", null, String(ALL.filter(r=>state.types[r.kind] && state.os[r.osb]).length)));
   [...counts.keys()].sort((a,b)=>b-a).forEach(m => rail.appendChild(mk(String(m), m, String(counts.get(m)))));
 }
 
@@ -627,7 +653,7 @@ function renderDetail(){
 
 function renderCadence(r){
   const host = $("#cad");
-  const track = TRACKS.get(r.os+"|"+r.major);
+  const track = TRACKS.get(r.osb+"|"+r.major);
   if (!host || !track || track.length < 2){ if(host) host.innerHTML=""; return; }
   const t0 = track[0].date.getTime(), t1 = track[track.length-1].date.getTime();
   const span = Math.max(1, t1-t0), W = 1000, H = 28;
@@ -690,10 +716,15 @@ function renderList(){
 function select(r,scroll){ selected = r; renderDetail(); renderList(); if (scroll) $("#detail").scrollIntoView({behavior:"smooth",block:"start"}); }
 function render(){ renderMedal(); renderRail(); renderDetail(); renderList(); }
 
-document.querySelectorAll(".seg").forEach(c => c.onclick = () => {
+document.querySelectorAll("#typesegs .seg").forEach(c => c.onclick = () => {
   const on = c.getAttribute("aria-pressed") !== "true";
   c.setAttribute("aria-pressed", String(on));
   state.types[c.dataset.f] = on; shown = 200; render();
+});
+document.querySelectorAll("#ossegs .seg").forEach(c => c.onclick = () => {
+  const on = c.getAttribute("aria-pressed") !== "true";
+  c.setAttribute("aria-pressed", String(on));
+  state.os[c.dataset.os] = on; shown = 200; render();
 });
 let qt;
 $("#q").addEventListener("input", e => {
@@ -702,17 +733,24 @@ $("#q").addEventListener("input", e => {
 });
 
 /* ── load ──────────────────────────────────── */
-async function load(){
-  let text = null, host = "";
-  for (const url of SOURCES){
+async function fetchFeed(feed){
+  for (const url of feed.urls){
     try {
       const res = await fetch(url,{cache:"no-store"});
       if (!res.ok) continue;
       const body = await res.text();
-      if (body.includes("BEGIN:VEVENT")){ text = body; host = new URL(url).hostname; break; }
+      if (body.includes("BEGIN:VEVENT")) return { name:feed.name, text:body, host:new URL(url).hostname };
     } catch(_){}
   }
-  if (!text){
+  return null;
+}
+
+async function load(){
+  const results = await Promise.all(FEEDS.map(fetchFeed));
+  const ok = results.filter(Boolean);
+  const failed = FEEDS.filter(f => !ok.some(o => o.name === f.name)).map(f => f.name);
+
+  if (!ok.length){
     $("#dot").classList.add("bad");
     $("#statustext").textContent = "AppleDB unreachable";
     $("#results").innerHTML = `<div class="note"><b>No connection to AppleDB.</b>
@@ -721,18 +759,26 @@ async function load(){
     $("#retry").onclick = () => { $("#dot").classList.remove("bad"); $("#statustext").textContent="Loading AppleDB…"; load(); };
     return;
   }
-  ALL = parseIcs(text);
-  const events = (text.match(/BEGIN:VEVENT/g) || []).length;
+
+  ALL = [];
+  let events = 0;
+  for (const r of ok){ ALL.push(...parseIcs(r.text)); events += (r.text.match(/BEGIN:VEVENT/g) || []).length; }
   buildTracks(ALL);
   selected = ALL.filter(r=>r.kind==="public").sort((a,b)=>b.date-a.date)[0] || null;
 
   // if AppleDB ever changes its summary format, say so rather than quietly
   // presenting a partial ledger as if it were complete
   const complete = events === 0 || ALL.length / events >= 0.97;
-  if (!complete) $("#dot").classList.add("bad");
-  $("#statustext").textContent = complete
-    ? `${ALL.length.toLocaleString()} builds · ${host}`
-    : `${ALL.length.toLocaleString()} of ${events.toLocaleString()} builds readable — data may be incomplete`;
+  const hosts = [...new Set(ok.map(o=>o.host))].join(", ");
+  if (!complete){
+    $("#dot").classList.add("bad");
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} of ${events.toLocaleString()} builds readable — data may be incomplete`;
+  } else if (failed.length){
+    $("#dot").classList.add("bad");
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} builds · ${hosts} — ${failed.join(", ")} unreachable`;
+  } else {
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} builds · ${hosts}`;
+  }
   $("#medalcap").innerHTML = "Each ring is a version, oldest at the centre.<br>Each dot sits where in the year it shipped.";
   render();
 }
