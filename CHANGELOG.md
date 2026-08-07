@@ -2,6 +2,11 @@
 
 All notable changes to the Release Ledger are documented here. Dates are UTC.
 
+## 2026-08-07 — AppleDB thank-you
+
+### Changed
+- Reached out to AaronP of the AppleDB team to confirm they had no objection to this project's use of their public API/feed data — confirmed, no objection. The footer credit is now a proper thank-you instead of a bare attribution line, and links directly to appledb.dev.
+
 ## 2026-08-07 — macOS support, OS toggle, contrast fix
 
 ### Added
