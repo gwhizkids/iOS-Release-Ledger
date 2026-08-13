@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>AppleOS · Release Ledger</title>
+<style>
+  :root{
+    /* sampled from the AppleTalk group sheet: cool charcoal drifting to dusty rose */
+    --bg-1:#17171f; --bg-2:#221d2a; --bg-3:#3b2a31;
+    --fill:rgba(255,255,255,.055);
+    --fill-2:rgba(255,255,255,.085);
+    --hair:rgba(255,255,255,.10);
+    --label:#f2f2f7;
+    --label-2:#adadbb;
+    --label-3:#97979f;
+    /* the icon's conic spectrum, assigned meaning */
+    --public:#3ac8e8;
+    --beta:#ff8a3d;
+    --rc:#c061ff;
+    --tool:#8a8a95;
+    --core:#ff4fa3;      /* the magenta at the centre of the medallion */
+    /* operating system accents, kept distinct from the kind colors above */
+    --os-ios:#5ac8fa;
+    --os-ipados:#bf5af2;
+    --os-macos:#32d74b;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    min-height:100vh;color:var(--label);font-family:var(--sans);
+    background:linear-gradient(178deg,var(--bg-1) 0%,var(--bg-2) 52%,var(--bg-3) 100%) fixed;
+    -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums;line-height:1.45;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:26px 16px 60px}
+
+  /* ── masthead ─────────────────────────────── */
+  .top{text-align:center;margin-bottom:6px}
+  h1{font-size:clamp(28px,7.6vw,38px);font-weight:700;letter-spacing:-.03em;margin:14px 0 4px}
+  h1 span{color:var(--label-2);font-weight:400}
+  .sub{margin:0 auto;max-width:40ch;color:var(--label-2);font-size:14px}
+  .live{
+    display:inline-flex;align-items:center;gap:7px;margin-top:12px;padding:5px 12px;
+    border-radius:999px;background:var(--fill);border:1px solid var(--hair);
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--label-2);
+  }
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--public);flex:none;animation:bp 2.6s ease-out infinite}
+  .dot.bad{background:var(--core);animation:none}
+  @keyframes bp{0%{box-shadow:0 0 0 0 rgba(58,200,232,.5)}70%{box-shadow:0 0 0 7px rgba(58,200,232,0)}100%{box-shadow:0 0 0 0 rgba(58,200,232,0)}}
+
+  /* ── the medallion ────────────────────────── */
+  .medal{position:relative;width:min(340px,86vw);margin:14px auto 4px}
+  .medal::before{
+    content:"";position:absolute;inset:-14%;border-radius:50%;z-index:-1;
+    background:radial-gradient(circle at 32% 74%,rgba(255,79,163,.30),transparent 58%),
+               radial-gradient(circle at 72% 26%,rgba(58,140,232,.28),transparent 58%);
+    filter:blur(26px);
+  }
+  .medal svg{display:block;width:100%;height:auto;overflow:visible}
+  .medal .ringhit{fill:none;stroke:transparent;stroke-width:9;cursor:pointer}
+  .medal .cardinal{fill:var(--label-3);font-family:var(--mono);font-size:8px;letter-spacing:.16em}
+  .ctr-maj{fill:var(--label);font-family:var(--sans);font-weight:700;font-size:34px;letter-spacing:-.03em}
+  .ctr-lab{fill:var(--label-3);font-family:var(--mono);font-size:8px;letter-spacing:.18em}
+  .medal-cap{
+    text-align:center;color:var(--label-3);font-family:var(--mono);font-size:10px;
+    letter-spacing:.08em;margin:2px 0 22px;line-height:1.7;
+  }
+
+  /* ── controls ─────────────────────────────── */
+  .field{position:relative;margin-bottom:12px}
+  .field input{
+    width:100%;padding:13px 15px 13px 40px;border-radius:13px;color:var(--label);
+    background:var(--fill);border:1px solid var(--hair);font-family:var(--mono);font-size:15px;
+    -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+  }
+  .field input::placeholder{color:var(--label-3)}
+  .field input:focus{outline:2px solid var(--core);outline-offset:1px}
+  .field svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--label-3)}
+
+  .segs{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:16px}
+  .seg{
+    flex:1 1 0;min-width:74px;padding:9px 6px;border-radius:11px;cursor:pointer;
+    background:var(--fill);border:1px solid transparent;color:var(--label-2);
+    font-size:12.5px;font-weight:560;letter-spacing:-.01em;display:flex;
+    align-items:center;justify-content:center;gap:6px;
+  }
+  .seg i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none;opacity:.9}
+  .seg[aria-pressed="true"]{background:var(--fill-2);border-color:var(--hair);color:var(--label)}
+  .seg[data-f="public"]{color:var(--public)} .seg[data-f="beta"]{color:var(--beta)}
+  .seg[data-f="rc"]{color:var(--rc)}         .seg[data-f="tool"]{color:var(--tool)}
+  .seg[data-os="iOS"]{color:var(--os-ios)}   .seg[data-os="iPadOS"]{color:var(--os-ipados)}
+  .seg[data-os="macOS"]{color:var(--os-macos)}
+  .seg[aria-pressed="false"]{opacity:.45}
+  .seg:focus-visible{outline:2px solid var(--core);outline-offset:2px}
+
+  .rail{display:flex;gap:6px;overflow-x:auto;padding:2px 0 14px;scrollbar-width:none}
+  .rail::-webkit-scrollbar{display:none}
+  .maj{
+    flex:none;min-width:46px;padding:8px 10px 6px;border-radius:12px;text-align:center;cursor:pointer;
+    background:var(--fill);border:1px solid transparent;color:var(--label-2);
+    font-family:var(--mono);font-size:14px;font-weight:600;
+  }
+  .maj small{display:block;font-size:9px;font-weight:400;opacity:.65;margin-top:1px}
+  .maj[aria-pressed="true"]{background:var(--core);color:#fff;border-color:transparent}
+  .maj:focus-visible{outline:2px solid var(--label);outline-offset:2px}
+
+  /* ── detail card ──────────────────────────── */
+  .card{
+    background:var(--fill);border:1px solid var(--hair);border-radius:20px;padding:20px 18px;margin-bottom:24px;
+    -webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);
+  }
+  .card-hd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .vtitle{font-size:clamp(21px,5.6vw,27px);font-weight:680;letter-spacing:-.025em;margin:0}
+  .vtitle em{font-style:normal;font-weight:450}
+  .pill{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;
+    padding:5px 9px;border-radius:7px;white-space:nowrap;
+  }
+  .pill.public{background:rgba(58,200,232,.15);color:var(--public)}
+  .pill.beta{background:rgba(255,138,61,.15);color:var(--beta)}
+  .pill.rc{background:rgba(192,97,255,.16);color:var(--rc)}
+  .pill.tool{background:rgba(138,138,149,.18);color:var(--tool)}
+
+  .bld{display:flex;align-items:flex-end;gap:2px;margin:18px 0 2px;flex-wrap:wrap}
+  .bs{display:flex;flex-direction:column;align-items:center;padding:0 5px;min-width:0}
+  .bs b{font-family:var(--mono);font-size:clamp(28px,9.2vw,46px);font-weight:600;line-height:1;letter-spacing:-.02em}
+  .bs u{
+    text-decoration:none;font-family:var(--mono);font-size:8.5px;letter-spacing:.15em;text-transform:uppercase;
+    color:var(--label-3);margin-top:8px;padding-top:6px;border-top:1px solid var(--hair);width:100%;text-align:center;
+  }
+  .bs.n1 b{color:var(--label)} .bs.n2 b{color:var(--core)} .bs.n3 b{color:var(--label)}
+
+  dl{margin:16px 0 0;border-top:1px solid var(--hair)}
+  .rw{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--hair);font-size:14px}
+  .rw dt{flex:none;width:92px;font-family:var(--mono);font-size:9.5px;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--label-3);padding-top:4px}
+  .rw dd{margin:0;flex:1;min-width:0}
+  .rw .s{display:block;color:var(--label-2);font-size:12.5px;margin-top:2px}
+
+  .cad{margin-top:18px}
+  .cad-hd{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.11em;text-transform:uppercase;color:var(--label-3);margin-bottom:7px}
+  .cad svg{width:100%;height:44px;display:block;overflow:visible}
+  .cad line.ax{stroke:var(--hair);stroke-width:1}
+  .cad line.t{stroke-width:1.6;opacity:.55;cursor:pointer}
+  .cad line.t.on{stroke-width:3;opacity:1}
+
+  details.dv summary{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--core);cursor:pointer;list-style:none;padding:3px 0;
+  }
+  details.dv summary::-webkit-details-marker{display:none}
+  details.dv summary::after{content:" ▸"} details.dv[open] summary::after{content:" ▾"}
+  details.dv p{font-family:var(--mono);font-size:11px;color:var(--label-2);word-break:break-word;margin:6px 0 0;line-height:1.75}
+  .adb{display:inline-block;margin-top:15px;padding:9px 14px;border-radius:10px;background:var(--fill-2);
+    border:1px solid var(--hair);color:var(--label);text-decoration:none;font-family:var(--mono);
+    font-size:11px;letter-spacing:.06em}
+
+  /* ── list ─────────────────────────────────── */
+  .lhd{display:flex;justify-content:space-between;align-items:baseline;padding-bottom:8px;
+    border-bottom:1px solid var(--hair);font-family:var(--mono);font-size:9.5px;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--label-3)}
+  ol.ls{list-style:none;margin:0;padding:0}
+  ol.ls li{border-bottom:1px solid var(--hair)}
+  .it{display:grid;grid-template-columns:auto 1fr auto;gap:2px 11px;align-items:center;width:100%;
+    background:none;border:0;color:inherit;text-align:left;padding:12px 4px;cursor:pointer;font:inherit}
+  .it:hover{background:rgba(255,255,255,.03)}
+  .it[aria-current="true"]{background:rgba(255,79,163,.10)}
+  .it:focus-visible{outline:2px solid var(--core);outline-offset:-2px}
+  .kd{grid-row:1/3;width:8px;height:8px;border-radius:50%;align-self:center}
+  .nm{font-size:14.5px;font-weight:540;letter-spacing:-.01em}
+  .nm .o{color:var(--label-2);font-weight:400}
+  .nm .q{font-weight:400}
+  .bd{font-family:var(--mono);font-size:11.5px;color:var(--label-3);grid-row:2;grid-column:2}
+  .dt{font-family:var(--mono);font-size:11.5px;grid-row:1;grid-column:3;text-align:right}
+  .gp{font-family:var(--mono);font-size:10.5px;color:var(--label-3);grid-row:2;grid-column:3;text-align:right}
+  .more{width:100%;margin-top:15px;padding:13px;border-radius:13px;background:var(--fill);
+    border:1px solid var(--hair);color:var(--label);font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+
+  .note{padding:26px 4px;color:var(--label-2);font-size:14px}
+  .note b{display:block;color:var(--label);margin-bottom:6px;font-size:15px}
+  .note button{margin-top:13px;padding:10px 16px;border-radius:11px;background:var(--label);border:0;
+    color:#17171f;font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;cursor:pointer}
+  .sk{height:12px;border-radius:5px;background:var(--fill-2);margin:11px 0;animation:sh 1.5s ease-in-out infinite}
+  @keyframes sh{0%,100%{opacity:.4}50%{opacity:.85}}
+  footer{margin-top:30px;padding-top:16px;border-top:1px solid var(--hair);
+    font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--label-3);line-height:1.9;text-align:center}
+  footer p{margin:0}
+  footer .credit{color:var(--label-2);margin-bottom:8px}
+  footer .credit b{color:var(--label);font-weight:600;letter-spacing:.02em}
+  footer a{color:var(--public);text-decoration:none;border-bottom:1px solid rgba(58,200,232,.35)}
+  footer a:hover{border-bottom-color:var(--public)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="medal" id="medal"></div>
+    <div class="medal-cap" id="medalcap">Each ring is a version. Each dot sits where in the year it shipped.</div>
+    <h1>AppleOS <span>Release Ledger</span></h1>
+    <p class="sub">Every iOS, iPadOS, and macOS build Apple has shipped since 2000 — public, beta, RC — and how long each one trailed the last.</p>
+    <div class="live"><span class="dot" id="dot"></span><span id="statustext">Loading AppleDB…</span></div>
+  </div>
+
+  <div class="field" style="margin-top:26px">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="26.6 · 23G71 · 17 beta 3" aria-label="Search version or build">
+  </div>
+
+  <div class="segs" id="ossegs" role="group" aria-label="Operating system">
+    <button class="seg" data-os="iOS"    aria-pressed="true"><i></i>iOS</button>
+    <button class="seg" data-os="iPadOS" aria-pressed="true"><i></i>iPadOS</button>
+    <button class="seg" data-os="macOS"  aria-pressed="true"><i></i>macOS</button>
+  </div>
+
+  <div class="segs" id="typesegs" role="group" aria-label="Release type">
+    <button class="seg" data-f="public" aria-pressed="true"><i></i>Public</button>
+    <button class="seg" data-f="beta"   aria-pressed="true"><i></i>Beta</button>
+    <button class="seg" data-f="rc"     aria-pressed="true"><i></i>RC</button>
+    <button class="seg" data-f="tool"   aria-pressed="false"><i></i>SDK</button>
+  </div>
+
+  <div class="rail" id="rail" role="group" aria-label="Major version"></div>
+  <div id="detail"></div>
+
+  <div class="lhd"><span id="lhL">Builds</span><span id="lhR"></span></div>
+  <div id="results"><div class="note"><div class="sk" style="width:66%"></div><div class="sk" style="width:44%"></div><div class="sk" style="width:57%"></div></div></div>
+
+  <footer>
+    <p class="credit">Medallion after the AppleTalk mark by <b>Lee Pears</b></p>
+    <p>Release data live from <a href="https://appledb.dev" target="_blank" rel="noopener">AppleDB</a> · littlebyteorg/appledb, © 2022 emiyl, MIT licensed — this whole ledger only exists because that team put in the extraordinary, ongoing work of documenting every Apple OS build in public, for free, and were kind enough to be fine with a project like this one leaning on it. Go star their repo, they've earned it.</p>
+    <p>Public beta dates sourced from MacRumors reporting and forum records</p>
+    <p>Built for the AppleTalk thread · not affiliated with Apple Inc.</p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+// One feed group per AppleDB calendar; each tries its own mirror list independently
+// so a hiccup on one (e.g. macOS's) doesn't take down the other's data.
+const FEEDS = [
+  { name:"iOS", urls:[
+      "https://api.appledb.dev/ios/iOS/main.ics",
+      "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/ios/iOS/main.ics",
+      "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/iOS/main.ics"
+  ]},
+  { name:"macOS", urls:[
+      "https://api.appledb.dev/ios/macOS/main.ics",
+      "https://raw.githubusercontent.com/littlebyteorg/appledb/gh-pages/ios/macOS/main.ics",
+      "https://cdn.jsdelivr.net/gh/littlebyteorg/appledb@gh-pages/ios/macOS/main.ics"
+  ]}
+];
+const KIND_COLOR = { public:"#3ac8e8", beta:"#ff8a3d", rc:"#c061ff", tool:"#8a8a95" };
+
+// Public beta seeding dates, sourced from MacRumors coverage (article dates and/or
+// Banglazed's MacRumors-forum beta threads) and cross-checked against a real AppleDB
+// build for every entry — see README/commit notes for method. Absence of an entry
+// means "not yet researched," never "no public beta existed." Backfilled newest-first
+// down to iOS 9 (Apple's first public-beta cycle); nothing earlier is covered.
+//
+// Keys are "version|date" where date is the AppleDB row's own release date. A plain
+// "version|date" key applies to both iOS and iPadOS on that date. When the two OSes
+// genuinely diverged for the same round, the key is OS-prefixed ("iPadOS|version|date")
+// and takes priority over any plain key for that OS/date — see publicBetaFor().
+//
+// Shape 1 (same:true) — Apple re-seeded the identical developer build to public
+// testers days later; AppleDB has one row (dated here) and "date" is the later
+// public-seed date pulled from MacRumors.
+// Shape 2 (own:true) — Apple cut a build specifically for the public beta; AppleDB
+// already carries it as its own row, dated on the day it went out, which is the date
+// used in the key — no separate "date" field needed.
+const PUBLIC_BETA = {
+  "27.0|2026-07-20":{n:2,date:"2026-07-22",same:true},
+  "iPadOS|27.0|2026-07-13":{n:1,own:true},
+  "26.6|2026-07-06":{n:4,date:"2026-07-07",same:true},
+  "iOS|27.0|2026-07-06":{n:1,date:"2026-07-13",same:true},
+  "26.6|2026-06-29":{n:3,date:"2026-06-30",same:true},
+  "26.6|2026-06-15":{n:2,date:"2026-06-16",same:true},
+  "26.6|2026-05-26":{n:1,date:"2026-05-28",same:true},
+  "26.5|2026-04-03":{n:1,date:"2026-04-03",same:true},
+  "26.4|2026-02-16":{n:1,date:"2026-02-17",same:true},
+  "26.3|2026-01-26":{n:3,date:"2026-01-27",same:true},
+  "26.3|2025-12-15":{n:1,date:"2025-12-17",same:true},
+  "26.2|2025-11-17":{n:2,date:"2025-11-18",same:true},
+  "26.2|2025-11-04":{n:1,date:"2025-11-06",same:true},
+  "26.1|2025-10-20":{n:4,date:"2025-10-20",same:true},
+  "26.1|2025-10-13":{n:3,date:"2025-10-14",same:true},
+  "26.1|2025-10-06":{n:2,date:"2025-10-07",same:true},
+  "26.1|2025-09-22":{n:1,date:"2025-09-24",same:true},
+  "iOS|26.0|2025-07-25":{n:1,own:true,note:"iPhone 11 variant"},
+  "iOS|26.0|2025-07-24":{n:1,own:true},
+  "iPadOS|26.0|2025-07-22":{n:1,date:"2025-07-24",same:true},
+  "18.6|2025-07-14":{n:3,date:"2025-07-15",same:true},
+  "18.6|2025-06-30":{n:2,date:"2025-07-01",same:true},
+  "18.6|2025-06-16":{n:1,date:"2025-06-18",same:true},
+  "18.5|2025-04-21":{n:2,date:"2025-04-22",same:true},
+  "18.4|2025-03-10":{n:3,date:"2025-03-11",same:true},
+  "18.4|2025-03-03":{n:2,date:"2025-03-04",same:true},
+  "18.4|2025-02-21":{n:1,date:"2025-02-24",same:true},
+  "18.2|2024-11-11":{n:2,date:"2024-11-12",same:true},
+  "18.2|2024-11-04":{n:1,date:"2024-11-06",same:true},
+  "18.1|2024-09-23":{n:2,date:"2024-09-24",same:true},
+  "18.1|2024-09-17":{n:1,date:"2024-09-19",same:true},
+  "18.0|2024-08-05":{n:3,date:"2024-08-06",same:true},
+  "18.0|2024-07-26":{n:2,date:"2024-07-29",same:true},
+  "18.0|2024-07-15":{n:1,date:"2024-07-15",same:true},
+  "17.6|2024-07-09":{n:3,date:"2024-07-10",same:true},
+  "17.6|2024-07-01":{n:2,date:"2024-07-02",same:true},
+  "17.5|2024-04-23":{n:3,date:"2024-04-24",same:true},
+  "17.4|2024-02-13":{n:3,date:"2024-02-14",same:true},
+  "17.4|2024-02-06":{n:2,date:"2024-02-07",same:true},
+  "iOS|17.4|2024-01-30":{n:1,date:"2024-01-30",same:true,note:"iPadOS's public beta 1 build for this round is unresolved"},
+  "17.3|2024-01-09":{n:3,date:"2024-01-10",same:true},
+  "17.2|2023-11-14":{n:3,date:"2023-11-15",same:true},
+  "17.1|2023-10-10":{n:3,date:"2023-10-10",same:true},
+  "17.0|2023-08-08":{n:3,date:"2023-08-09",same:true},
+  "17.0|2023-07-31":{n:2,date:"2023-07-31",same:true},
+  "17.0|2023-07-11":{n:1,date:"2023-07-12",same:true},
+  "16.6|2023-05-31":{n:2,date:"2023-06-01",same:true},
+  "16.6|2023-05-19":{n:1,date:"2023-05-22",same:true},
+  "16.5|2023-04-25":{n:3,date:"2023-04-26",same:true},
+  "16.5|2023-04-11":{n:2,date:"2023-04-12",same:true},
+  "16.5|2023-03-28":{n:1,date:"2023-03-30",same:true},
+  "16.4|2023-02-16":{n:1,date:"2023-02-17",same:true},
+  "16.3|2022-12-14":{n:1,date:"2022-12-15",same:true},
+  "16.2|2022-11-15":{n:3,date:"2022-11-16",same:true},
+  "16.2|2022-11-08":{n:2,date:"2022-11-09",same:true},
+  "16.2|2022-10-25":{n:1,date:"2022-10-27",same:true},
+  "16.1|2022-09-27":{n:3,date:"2022-09-28",same:true},
+  "16.1|2022-09-20":{n:2,date:"2022-09-21",same:true},
+  "16.1|2022-09-14":{n:1,date:"2022-09-15",same:true},
+  "iOS|16.0|2022-08-29":{n:6,date:"2022-08-30",same:true},
+  "iOS|16.0|2022-08-23":{n:5,date:"2022-08-24",same:true},
+  "iPadOS|16.1|2022-08-23":{n:5,date:"2022-08-24",same:true,note:"labeled 16.1 beta 1 — iPadOS's public track briefly jumped ahead of iOS's"},
+  "16.0|2022-08-15":{n:4,date:"2022-08-15",same:true},
+  "16.0|2022-08-08":{n:3,date:"2022-08-09",same:true},
+  "16.0|2022-07-27":{n:2,date:"2022-07-28",same:true},
+  "16.0|2022-07-11":{n:1,date:"2022-07-11",same:true},
+  "15.6|2022-05-18":{n:1,date:"2022-05-19",same:true},
+  "15.5|2022-04-19":{n:2,date:"2022-04-20",same:true},
+  "15.5|2022-04-05":{n:1,date:"2022-04-06",same:true},
+  "15.4|2022-02-15":{n:3,date:"2022-02-16",same:true},
+  "15.4|2022-02-08":{n:2,date:"2022-02-09",same:true},
+  "15.4|2022-01-27":{n:1,date:"2022-01-28",same:true},
+  "15.3|2022-01-12":{n:2,date:"2022-01-13",same:true},
+  "15.3|2021-12-17":{n:1,date:"2021-12-20",same:true},
+  "15.2|2021-11-09":{n:2,date:"2021-11-10",same:true},
+  "15.2|2021-10-27":{n:1,date:"2021-10-28",same:true},
+  "15.1|2021-09-28":{n:2,date:"2021-09-29",same:true},
+  "15.1|2021-09-21":{n:1,date:"2021-09-22",same:true},
+  "15.0|2021-06-30":{n:1,date:"2021-06-30",same:true},
+  "14.2|2020-10-20":{n:4,date:"2020-10-21",same:true},
+  "14.2|2020-10-13":{n:3,date:"2020-10-14",same:true},
+  "14.2|2020-09-29":{n:2,date:"2020-09-30",same:true},
+  "14.2|2020-09-17":{n:1,date:"2020-09-21",same:true},
+  "14.0|2020-08-18":{n:5,date:"2020-08-19",same:true},
+  "14.0|2020-07-22":{n:2,date:"2020-07-23",same:true},
+  "14.0|2020-07-07":{n:1,date:"2020-07-09",same:true},
+  "13.3|2019-11-05":{n:1,date:"2019-11-06",same:true},
+  "13.1|2019-09-10":{n:3,date:"2019-09-11",same:true},
+  "13.1|2019-09-04":{n:2,date:"2019-09-04",same:true},
+  "13.1|2019-08-27":{n:1,date:"2019-08-28",same:true},
+  "13.0|2019-08-15":{n:6,date:"2019-08-15",same:true},
+  "13.0|2019-08-07":{n:5,date:"2019-08-08",same:true},
+  "13.0|2019-07-29":{n:4,date:"2019-07-30",same:true},
+  "13.0|2019-07-17":{n:3,date:"2019-07-18",same:true},
+  "13.0|2019-07-08":{n:2,date:"2019-07-08",same:true},
+  "13.0|2019-06-17":{n:1,date:"2019-06-24",same:true},
+  "12.4|2019-05-20":{n:1,date:"2019-05-20",same:true},
+  "12.3|2019-04-29":{n:4,date:"2019-04-29",same:true},
+  "12.3|2019-04-22":{n:3,date:"2019-04-23",same:true},
+  "12.2|2019-01-24":{n:1,date:"2019-01-28",same:true},
+  "12.1.3|2018-12-19":{n:1,date:"2018-12-19",same:true},
+  "12.1.2|2018-12-10":{n:1,date:"2018-12-11",same:true},
+  "12.1.1|2018-10-31":{n:1,date:"2018-11-01",same:true},
+  "12.1|2018-09-18":{n:1,date:"2018-09-20",same:true},
+  "12.0|2018-06-19":{n:1,date:"2018-06-25",same:true},
+  "11.4.1|2018-05-30":{n:1,date:"2018-05-31",same:true},
+  "11.4|2018-04-02":{n:1,date:"2018-04-03",same:true},
+  "11.3|2018-01-24":{n:1,date:"2018-01-25",same:true},
+  "11.2.5|2018-01-09":{n:1,date:"2018-01-10",same:true},
+  "11.2|2017-10-30":{n:1,date:"2017-11-01",same:true},
+  "11.1|2017-10-09":{n:2,date:"2017-10-09",same:true},
+  "11.1|2017-09-27":{n:1,date:"2017-09-28",same:true},
+  "11.0|2017-07-10":{n:2,date:"2017-07-12",same:true},
+  "11.0|2017-06-26":{n:1,date:"2017-06-26",same:true},
+  "10.3|2017-02-20":{n:3,date:"2017-02-21",same:true},
+  "10.2|2016-11-07":{n:2,date:"2016-11-08",same:true},
+  "10.2|2016-10-31":{n:1,date:"2016-11-01",same:true},
+  "10.1|2016-10-04":{n:2,date:"2016-10-05",same:true},
+  "10.1|2016-09-21":{n:1,date:"2016-09-22",same:true},
+  "10.0|2016-08-19":{n:6,date:"2016-08-19",same:true},
+  "10.0|2016-08-15":{n:5,date:"2016-08-15",same:true},
+  "10.0|2016-08-09":{n:4,date:"2016-08-10",same:true},
+  "10.0|2016-08-01":{n:3,date:"2016-08-02",same:true},
+  "10.0|2016-07-18":{n:2,date:"2016-07-20",same:true},
+  "10.0|2016-07-05":{n:1,date:"2016-07-07",same:true},
+  "9.0|2015-08-06":{n:3,date:"2015-08-06",same:true},
+  "9.0|2015-07-21":{n:2,date:"2015-07-22",same:true},
+  "9.0|2015-07-08":{n:1,date:"2015-07-09",same:true},
+  // KNOWN PENDING: iOS/iPadOS 26.6 public beta 5 — MacRumors' 2026-07-13 article title
+  // carries an "[Update: Public Beta Available]" suffix, meaning the public seed could
+  // be that same day or the next. Deliberately omitted rather than guessed.
+};
+
+let ALL = [], TRACKS = new Map(), MAJORS = [], selected = null, shown = 200;
+const state = { q:"", types:{public:true,beta:true,rc:true,tool:false}, os:{iOS:true,iPadOS:true,macOS:true}, major:null };
+// Mac OS X / OS X / macOS are the same product under three eras of branding —
+// bucket them together so the OS toggle and gap/cadence tracking treat them as
+// one continuous line rather than fragmenting at each rename.
+const osBucket = os => (os==="Mac OS X"||os==="OS X"||os==="macOS") ? "macOS" : os==="iPadOS" ? "iPadOS" : "iOS";
+const $ = s => document.querySelector(s);
+
+/* ── parse ─────────────────────────────────── */
+const unesc = v => v.replace(/\\n/g,"\n").replace(/\\,/g,",").replace(/\\;/g,";").replace(/\\\\/g,"\\");
+
+function parseIcs(text){
+  const flat = text.replace(/\r\n[ \t]/g,"").replace(/\n[ \t]/g,"");
+  const out = [];
+  for (const block of flat.split("BEGIN:VEVENT").slice(1)){
+    const grab = re => { const m = block.match(re); return m ? m[1].trim() : ""; };
+    const summary = unesc(grab(/^SUMMARY:(.*)$/m));
+    const day     = grab(/^DTSTART;VALUE=DATE:(\d{8})$/m);
+    const desc    = unesc(grab(/^DESCRIPTION:([\s\S]*?)$/m));
+    if (!summary || !day) continue;
+
+    const pm = summary.match(/^(.*)\s+\(([^()]+)\)\s*$/);
+    const label = pm ? pm[1] : summary, build = pm ? pm[2] : "";
+    const lm = label.match(/^(iPhone Software|iPhone OS|iPadOS|iOS|Mac OS X|OS X|macOS|\S+)\s+(\d[\d.]*)\s*(.*)$/);
+    if (!lm) continue;
+    const os = lm[1], version = lm[2], qualifier = lm[3].trim();
+
+    const q = qualifier.toLowerCase(), d = desc.toLowerCase();
+    const kind = /\bsdk\b|simulator/.test(q + " " + d) ? "tool"
+               : (/release candidate/.test(d) || /\brc\b|\bgm\b/.test(q)) ? "rc"
+               : (/beta/.test(q) || /this is a beta build/.test(d)) ? "beta" : "public";
+
+    let devices = [];
+    const dm = desc.match(/Supported devices:\s*\n([\s\S]*?)(?:\n\s*\n|$)/);
+    if (dm) devices = dm[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+
+    const date = new Date(+day.slice(0,4), +day.slice(4,6)-1, +day.slice(6,8));
+    const doy = Math.floor((date - new Date(date.getFullYear(),0,1)) / 86400000);
+
+    out.push({
+      os, osb:osBucket(os), version, qualifier, build, kind, devices, date, doy,
+      rsr:/rapid security response/i.test(desc),
+      bsi:/background security improvement/i.test(desc),
+      internal:/internal build/i.test(desc),
+      url:(desc.match(/https:\/\/appledb\.dev\/\S+/)||[""])[0],
+      major: parseInt(version,10),
+      key: os+";"+build+";"+version+";"+qualifier
+    });
+  }
+  return out;
+}
+
+function buildTracks(list){
+  TRACKS = new Map();
+  for (const r of list){
+    if (r.kind === "tool") continue;
+    const k = r.osb + "|" + r.major;
+    (TRACKS.get(k) || TRACKS.set(k,[]).get(k)).push(r);
+  }
+  for (const arr of TRACKS.values()){
+    arr.sort((a,b)=> a.date-b.date || a.build.localeCompare(b.build));
+    arr.forEach((r,i)=>{ r.prev = i?arr[i-1]:null; r.gap = i?Math.round((r.date-arr[i-1].date)/86400000):null; });
+  }
+  MAJORS = [...new Set(list.map(r=>r.major))].sort((a,b)=>a-b);
+}
+
+/* ── format ────────────────────────────────── */
+const DOW=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const longDate = d => `${DOW[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]} ${d.getFullYear()}`;
+const shortDate = d => `${String(d.getDate()).padStart(2,"0")} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+
+function ago(d){
+  const days = Math.floor((Date.now()-d)/86400000);
+  if (days<=0) return "today";
+  if (days===1) return "yesterday";
+  if (days<31) return days+" days ago";
+  const mo = Math.round(days/30.44);
+  if (mo<24) return mo+(mo===1?" month ago":" months ago");
+  const y = Math.floor(days/365.25), rm = Math.round((days%365.25)/30.44);
+  return y+(y===1?" year":" years")+(rm?`, ${rm} mo`:"")+" ago";
+}
+/* ── public beta lookup ───────────────────────
+   PUBLIC_BETA is keyed "version|date" (applies to both OSes) or, when iOS and
+   iPadOS genuinely diverged for the same round, "os|version|date" — the
+   OS-specific key wins when both could match. */
+const isoDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const parseISO = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+function publicBetaFor(r){
+  if (r.kind !== "beta") return null;
+  const dk = isoDate(r.date);
+  return PUBLIC_BETA[r.os+"|"+r.version+"|"+dk] || PUBLIC_BETA[r.version+"|"+dk] || null;
+}
+
+function pillOf(r){
+  if (r.kind==="tool") return ["tool", /simulator/i.test(r.qualifier)?"Simulator":"SDK"];
+  if (r.kind==="rc")   return ["rc","Release candidate"];
+  if (r.kind==="beta"){
+    const pb = publicBetaFor(r);
+    if (pb && pb.own) return ["public", `Public beta ${pb.n}`];
+    return ["beta", r.internal?"Internal beta":"Beta"];
+  }
+  if (r.rsr) return ["public","Rapid Security Response"];
+  if (r.bsi) return ["public","Background security"];
+  return ["public","Public release"];
+}
+const splitBuild = b => { const m=b.match(/^(\d+)([A-Z])(.*)$/); return m?[m[1],m[2],m[3]]:null; };
+
+/* ── medallion: rings = versions, angle = time of year, hue = season ── */
+function renderMedal(){
+  const host = $("#medal");
+  if (!ALL.length){ host.innerHTML=""; return; }
+  const S=340, C=S/2, R0=46, R1=150;
+  const rings = MAJORS.length;
+  const rad = i => rings<2 ? (R0+R1)/2 : R0 + (i/(rings-1))*(R1-R0);
+  const idx = new Map(MAJORS.map((m,i)=>[m,i]));
+
+  let dots = "", hits = "";
+  for (const r of ALL){
+    if (r.kind === "tool") continue;
+    const i = idx.get(r.major); if (i === undefined) continue;
+    const R = rad(i);
+    const a = (r.doy/365)*Math.PI*2 - Math.PI/2;
+    const x = C + R*Math.cos(a), y = C + R*Math.sin(a);
+    const hue = Math.round(((r.doy/365)*360 + 185) % 360);
+    const lit = (state.major === null || state.major === r.major);
+    const size = Math.max(1.15, 2.15 - i*0.045);
+    dots += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${size.toFixed(2)}"
+      fill="hsl(${hue} 88% 63%)" opacity="${lit?0.95:0.16}"/>`;
+  }
+  for (const m of MAJORS){
+    const R = rad(idx.get(m));
+    hits += `<circle class="ringhit" cx="${C}" cy="${C}" r="${R.toFixed(1)}" data-m="${m}"><title>${m} line</title></circle>`;
+  }
+
+  const cur = state.major === null ? "ALL" : String(state.major);
+  const cnt = ALL.filter(r => r.kind!=="tool" && (state.major===null || r.major===state.major)).length;
+
+  host.innerHTML = `
+  <svg viewBox="0 0 ${S} ${S}" role="img" aria-label="Every iOS build, ringed by version and placed by time of year">
+    <circle cx="${C}" cy="${C}" r="${R1+13}" fill="none" stroke="rgba(255,255,255,.07)"/>
+    ${dots}${hits}
+    <text class="cardinal" x="${C}" y="${C-R1-19}" text-anchor="middle">JAN</text>
+    <text class="cardinal" x="${C+R1+19}" y="${C+3}" text-anchor="middle">APR</text>
+    <text class="cardinal" x="${C}" y="${C+R1+25}" text-anchor="middle">JUL</text>
+    <text class="cardinal" x="${C-R1-19}" y="${C+3}" text-anchor="middle">OCT</text>
+    <text class="ctr-lab" x="${C}" y="${C-16}" text-anchor="middle">VERSION</text>
+    <text class="ctr-maj" x="${C}" y="${C+14}" text-anchor="middle">${cur}</text>
+    <text class="ctr-lab" x="${C}" y="${C+30}" text-anchor="middle">${cnt} BUILDS</text>
+  </svg>`;
+
+  host.querySelectorAll(".ringhit").forEach(c => c.addEventListener("click", () => {
+    const m = +c.dataset.m;
+    state.major = state.major === m ? null : m;
+    state.q = ""; $("#q").value = ""; shown = 200; render();
+  }));
+}
+
+/* ── filter + render ───────────────────────── */
+function tokenHit(t, r, hay){
+  // tokens containing a letter are matched loosely (build strings, "beta", "rc", "ipados")
+  if (/[a-z]/.test(t)) return hay.includes(t);
+  // a bare number must line up with a version segment or a qualifier number —
+  // otherwise "17 beta 3" drags in every 17.3 build
+  if (r.version === t || r.version.startsWith(t + ".")) return true;
+  if (r.qualifier.toLowerCase().split(/[^a-z0-9]+/).includes(t)) return true;
+  if (t.length >= 3 && r.build.toLowerCase().includes(t)) return true;
+  return false;
+}
+
+function matches(r){
+  if (!state.types[r.kind]) return false;
+  if (!state.os[r.osb]) return false;
+  if (state.q){
+    const hay = (r.os+" "+r.version+" "+r.qualifier+" "+r.build).toLowerCase();
+    return state.q.toLowerCase().split(/\s+/).filter(Boolean).every(t => tokenHit(t, r, hay));
+  }
+  return state.major === null || r.major === state.major;
+}
+
+function renderRail(){
+  const counts = new Map();
+  for (const r of ALL) if (state.types[r.kind] && state.os[r.osb]) counts.set(r.major,(counts.get(r.major)||0)+1);
+  const rail = $("#rail"); rail.innerHTML = "";
+  const mk = (txt,val,sub) => {
+    const b = document.createElement("button");
+    b.className="maj"; b.type="button";
+    b.setAttribute("aria-pressed", String(state.major===val));
+    b.innerHTML = `${txt}<small>${sub}</small>`;
+    b.onclick = () => { state.major = state.major===val ? null : val; shown=200; render(); };
+    return b;
+  };
+  rail.appendChild(mk("All", null, String(ALL.filter(r=>state.types[r.kind] && state.os[r.osb]).length)));
+  [...counts.keys()].sort((a,b)=>b-a).forEach(m => rail.appendChild(mk(String(m), m, String(counts.get(m)))));
+}
+
+function renderDetail(){
+  const el = $("#detail");
+  if (!selected){ el.innerHTML=""; return; }
+  const r = selected, [pc,pt] = pillOf(r), sp = splitBuild(r.build);
+
+  const bld = sp
+    ? `<div class="bld" aria-label="Build ${r.build}">
+         <span class="bs n1"><b>${sp[0]}</b><u>Darwin</u></span>
+         <span class="bs n2"><b>${sp[1]}</b><u>Train</u></span>
+         <span class="bs n3"><b>${sp[2]}</b><u>Sequence</u></span></div>`
+    : `<div class="bld"><span class="bs n1"><b>${r.build||"—"}</b><u>Build</u></span></div>`;
+
+  const gap = (r.gap===null||r.gap===undefined)
+    ? `<dd>First recorded build of the ${r.os} ${r.major} line.</dd>`
+    : `<dd>${r.gap===0?"Same day as":`${r.gap} day${r.gap===1?"":"s"} after`} ${r.prev.os} ${r.prev.version}${r.prev.qualifier?" "+r.prev.qualifier:""}
+        <span class="s">${r.prev.build} · ${shortDate(r.prev.date)}</span></dd>`;
+
+  const dv = r.devices.length
+    ? `<details class="dv"><summary>${r.devices.length} supported device${r.devices.length===1?"":"s"}</summary><p>${r.devices.join(" · ")}</p></details>`
+    : `<span class="s">Not recorded</span>`;
+
+  const pb = publicBetaFor(r);
+  const pbRow = !pb ? "" : `<div class="rw"><dt>Public beta</dt><dd>${
+      pb.own
+        ? `This build <em style="font-style:normal;color:var(--public)">is</em> public beta ${pb.n}${pb.note?`<span class="s">${pb.note}</span>`:""}`
+        : `Public beta ${pb.n} — this build was reseeded to public testers on ${longDate(parseISO(pb.date))}<span class="s">${ago(parseISO(pb.date))}${pb.note?" · "+pb.note:""}</span>`
+    }</dd></div>`;
+
+  el.innerHTML = `<div class="card">
+    <div class="card-hd">
+      <h2 class="vtitle">${r.os} ${r.version}${r.qualifier?` <em style="color:${KIND_COLOR[r.kind]}">${r.qualifier}</em>`:""}</h2>
+      <span class="pill ${pc}">${pt}</span>
+    </div>
+    ${bld}
+    <dl>
+      <div class="rw"><dt>Released</dt><dd>${longDate(r.date)}<span class="s">${ago(r.date)}</span></dd></div>
+      <div class="rw"><dt>Gap</dt>${gap}</div>
+      <div class="rw"><dt>Runs on</dt><dd>${dv}</dd></div>
+      ${pbRow}
+    </dl>
+    <div class="cad" id="cad"></div>
+    ${r.url?`<a class="adb" href="${r.url}" target="_blank" rel="noopener">Full record on AppleDB ↗</a>`:""}
+  </div>`;
+  renderCadence(r);
+}
+
+function renderCadence(r){
+  const host = $("#cad");
+  const track = TRACKS.get(r.osb+"|"+r.major);
+  if (!host || !track || track.length < 2){ if(host) host.innerHTML=""; return; }
+  const t0 = track[0].date.getTime(), t1 = track[track.length-1].date.getTime();
+  const span = Math.max(1, t1-t0), W = 1000, H = 28;
+
+  const ticks = track.map(x => {
+    const px = ((x.date.getTime()-t0)/span)*(W-8)+4, on = x===r;
+    return `<line class="t${on?" on":""}" stroke="${on?"#f2f2f7":KIND_COLOR[x.kind]}"
+      x1="${px.toFixed(1)}" y1="${on?0:6}" x2="${px.toFixed(1)}" y2="${on?H:H-6}"
+      data-k="${encodeURIComponent(x.key)}"><title>${x.os} ${x.version}${x.qualifier?" "+x.qualifier:""} · ${shortDate(x.date)}</title></line>`;
+  }).join("");
+
+  host.innerHTML = `
+    <div class="cad-hd"><span>${r.os} ${r.major} · ${track.length} builds</span>
+      <span>${shortDate(track[0].date)} → ${shortDate(track[track.length-1].date)}</span></div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
+      aria-label="Timeline of ${track.length} builds in the ${r.os} ${r.major} line">
+      <line class="ax" x1="0" y1="${H/2}" x2="${W}" y2="${H/2}"/>${ticks}</svg>`;
+
+  host.querySelectorAll("line.t").forEach(ln => ln.addEventListener("click", () => {
+    const hit = ALL.find(x => x.key === decodeURIComponent(ln.dataset.k));
+    if (hit) select(hit,false);
+  }));
+}
+
+function renderList(){
+  const hits = ALL.filter(matches).sort((a,b)=> b.date-a.date || b.build.localeCompare(a.build));
+  $("#lhL").textContent = state.q ? `“${state.q}”` : state.major===null ? "All builds" : `${state.major} line`;
+  $("#lhR").textContent = hits.length ? `${hits.length.toLocaleString()} result${hits.length===1?"":"s"}` : "";
+
+  const box = $("#results");
+  if (!hits.length){
+    box.innerHTML = `<div class="note"><b>Nothing matches that.</b>Try a version (18.4), a build (22E240), or clear the search and tap a ring.</div>`;
+    return;
+  }
+  const ol = document.createElement("ol"); ol.className = "ls";
+  for (const r of hits.slice(0,shown)){
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.className = "it"; b.type = "button";
+    if (r === selected) b.setAttribute("aria-current","true");
+    b.innerHTML =
+      `<span class="kd" style="background:${KIND_COLOR[r.kind]}"></span>
+       <span class="nm"><span class="o">${r.os}</span> ${r.version}${r.qualifier?` <span class="q" style="color:${KIND_COLOR[r.kind]}">${r.qualifier}</span>`:""}</span>
+       <span class="dt">${shortDate(r.date)}</span>
+       <span class="bd">${r.build}</span>
+       <span class="gp">${(r.gap===null||r.gap===undefined)?"first":"+"+r.gap+"d"}</span>`;
+    b.onclick = () => select(r,true);
+    li.appendChild(b); ol.appendChild(li);
+  }
+  box.innerHTML = ""; box.appendChild(ol);
+  if (hits.length > shown){
+    const m = document.createElement("button");
+    m.className = "more"; m.type = "button";
+    m.textContent = `Show ${Math.min(200,hits.length-shown)} more of ${hits.length.toLocaleString()}`;
+    m.onclick = () => { shown += 200; renderList(); };
+    box.appendChild(m);
+  }
+}
+
+function select(r,scroll){ selected = r; renderDetail(); renderList(); if (scroll) $("#detail").scrollIntoView({behavior:"smooth",block:"start"}); }
+function render(){ renderMedal(); renderRail(); renderDetail(); renderList(); }
+
+document.querySelectorAll("#typesegs .seg").forEach(c => c.onclick = () => {
+  const on = c.getAttribute("aria-pressed") !== "true";
+  c.setAttribute("aria-pressed", String(on));
+  state.types[c.dataset.f] = on; shown = 200; render();
+});
+document.querySelectorAll("#ossegs .seg").forEach(c => c.onclick = () => {
+  const on = c.getAttribute("aria-pressed") !== "true";
+  c.setAttribute("aria-pressed", String(on));
+  state.os[c.dataset.os] = on; shown = 200; render();
+});
+let qt;
+$("#q").addEventListener("input", e => {
+  clearTimeout(qt);
+  qt = setTimeout(() => { state.q = e.target.value.trim(); shown = 200; render(); }, 130);
+});
+
+/* ── load ──────────────────────────────────── */
+async function fetchFeed(feed){
+  for (const url of feed.urls){
+    try {
+      const res = await fetch(url,{cache:"no-store"});
+      if (!res.ok) continue;
+      const body = await res.text();
+      if (body.includes("BEGIN:VEVENT")) return { name:feed.name, text:body, host:new URL(url).hostname };
+    } catch(_){}
+  }
+  return null;
+}
+
+async function load(){
+  const results = await Promise.all(FEEDS.map(fetchFeed));
+  const ok = results.filter(Boolean);
+  const failed = FEEDS.filter(f => !ok.some(o => o.name === f.name)).map(f => f.name);
+
+  if (!ok.length){
+    $("#dot").classList.add("bad");
+    $("#statustext").textContent = "AppleDB unreachable";
+    $("#results").innerHTML = `<div class="note"><b>No connection to AppleDB.</b>
+      This page reads live, so it needs to reach api.appledb.dev or the GitHub mirror.
+      <br><button type="button" id="retry">Try again</button></div>`;
+    $("#retry").onclick = () => { $("#dot").classList.remove("bad"); $("#statustext").textContent="Loading AppleDB…"; load(); };
+    return;
+  }
+
+  ALL = [];
+  let events = 0;
+  for (const r of ok){ ALL.push(...parseIcs(r.text)); events += (r.text.match(/BEGIN:VEVENT/g) || []).length; }
+  buildTracks(ALL);
+  selected = ALL.filter(r=>r.kind==="public").sort((a,b)=>b.date-a.date)[0] || null;
+
+  // if AppleDB ever changes its summary format, say so rather than quietly
+  // presenting a partial ledger as if it were complete
+  const complete = events === 0 || ALL.length / events >= 0.97;
+  const hosts = [...new Set(ok.map(o=>o.host))].join(", ");
+  if (!complete){
+    $("#dot").classList.add("bad");
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} of ${events.toLocaleString()} builds readable — data may be incomplete`;
+  } else if (failed.length){
+    $("#dot").classList.add("bad");
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} builds · ${hosts} — ${failed.join(", ")} unreachable`;
+  } else {
+    $("#statustext").textContent = `${ALL.length.toLocaleString()} builds · ${hosts}`;
+  }
+  $("#medalcap").innerHTML = "Each ring is a version, oldest at the centre.<br>Each dot sits where in the year it shipped.";
+  render();
+}
+load();
+</script>
+</body>
+</html>
